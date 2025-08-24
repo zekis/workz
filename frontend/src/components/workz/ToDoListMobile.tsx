@@ -18,21 +18,45 @@ import {
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { useTodos } from "../../hooks/useTodos";
+import { useContextMenu } from "../../hooks/useContextMenu";
+import { ToDoContextMenu } from "./ToDoContextMenu";
 
-export interface SelectionApi {
-  state: { selected: Set<string>; lastSelectedId: string | null; mode: "none" | "selecting" };
-  isSelected: (id: string) => boolean;
-  toggle: (id: string) => void;
+// Helper functions for colors (same as table)
+function getStatusColor(status: string | null | undefined): "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning" {
+  switch (status?.toLowerCase()) {
+    case "open": return "info";
+    case "in progress": return "primary";
+    case "blocked": return "warning";
+    case "closed": return "success";
+    case "cancelled": return "error";
+    default: return "default";
+  }
 }
+
+function getPriorityColor(priority: string | null | undefined): "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning" {
+  switch (priority?.toLowerCase()) {
+    case "high": return "error";
+    case "medium": return "warning";
+    case "low": return "info";
+    default: return "default";
+  }
+}
+
 export interface ToDoListMobileProps {
   onOpen?: (id: string) => void;
-  selection?: SelectionApi; // reserved for future selection UI
-  orderedIds?: string[];
+  groupedTodos?: import("../../hooks/useTodoTableState").TodoGroup[];
 }
 
 export function ToDoListMobile(props: ToDoListMobileProps) {
-  const { onOpen } = props;
-  const { todos, isLoading, error, refetch } = useTodos();
+  const { onOpen, groupedTodos } = props;
+  const { isLoading, error, refetch } = useTodos();
+  const contextMenu = useContextMenu();
+
+  // Flatten grouped todos
+  const todos = React.useMemo(() => {
+    if (!groupedTodos) return [];
+    return groupedTodos.flatMap(group => group.todos);
+  }, [groupedTodos]);
 
   if (error) {
     return (
@@ -87,15 +111,35 @@ export function ToDoListMobile(props: ToDoListMobileProps) {
                   >
                     {item.subject}
                   </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : ""}
+                  </Typography>
                 </Box>
-                <IconButton size="small" aria-label="Open actions">
+                <IconButton
+                  size="small"
+                  aria-label="Open actions"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    contextMenu.handleContextMenu(e, item);
+                  }}
+                >
                   <MoreVertIcon fontSize="small" />
                 </IconButton>
               </Stack>
 
               <Stack direction="row" spacing={1} mt={1} flexWrap="wrap">
-                <Chip size="small" variant="outlined" label={item.status || ""} />
-                <Chip size="small" variant="outlined" label={item.priority || ""} />
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  label={item.status || "No Status"}
+                  color={getStatusColor(item.status)}
+                />
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  label={item.priority || "No Priority"}
+                  color={getPriorityColor(item.priority)}
+                />
               </Stack>
 
               <Stack direction="row" alignItems="center" spacing={1} mt={1}>
@@ -103,13 +147,22 @@ export function ToDoListMobile(props: ToDoListMobileProps) {
                   {(item.assignee || "?").slice(0, 1).toUpperCase()}
                 </Avatar>
                 <Typography variant="caption" color="text.secondary" noWrap>
-                  {(item.assignee || "Unassigned")} • {(item.updatedAt || "")}
+                  {(item.assignee || "Unassigned")}
                 </Typography>
               </Stack>
             </CardContent>
           </CardActionArea>
         </Card>
       ))}
+
+      <ToDoContextMenu
+        anchorEl={contextMenu.anchorEl}
+        open={contextMenu.open}
+        onClose={contextMenu.handleClose}
+        todo={contextMenu.selectedTodo}
+        onOpen={onOpen}
+        onRefresh={refetch}
+      />
     </Box>
   );
 }

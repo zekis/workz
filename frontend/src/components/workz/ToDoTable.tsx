@@ -3,7 +3,7 @@
  * - Desktop/md+ renderer
  * - Uses useTodos hook for data; shows basic loading/empty/error states
  * - Emits onOpen(id) on row click
- * - Selection checkboxes remain but are low priority and can be ignored
+ * - Includes task completion buttons for quick status changes
  */
 import React from "react";
 import {
@@ -13,29 +13,86 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  Checkbox,
   Typography,
-  Box
+  Box,
+  Chip,
+  Collapse,
+  IconButton,
+  Tooltip
 } from "@mui/material";
+import {
+  CheckCircle as CheckCircleIcon,
+  RadioButtonUnchecked as RadioButtonUncheckedIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon
+} from "@mui/icons-material";
 import { useTodos } from "../../hooks/useTodos";
+import { useContextMenu } from "../../hooks/useContextMenu";
+import { ToDoContextMenu } from "./ToDoContextMenu";
+import { useFrappeUpdateDoc } from "frappe-react-sdk";
 
-export interface SelectionApi {
-  state: { selected: Set<string>; lastSelectedId: string | null; mode: "none" | "selecting" };
-  isSelected: (id: string) => boolean;
-  toggle: (id: string) => void;
+// Helper functions for colors
+function getStatusColor(status: string | null | undefined): "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning" {
+  switch (status?.toLowerCase()) {
+    case "open": return "info";
+    case "in progress": return "primary";
+    case "blocked": return "warning";
+    case "closed": return "success";
+    case "cancelled": return "error";
+    default: return "default";
+  }
 }
+
+function getPriorityColor(priority: string | null | undefined): "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning" {
+  switch (priority?.toLowerCase()) {
+    case "high": return "error";
+    case "medium": return "warning";
+    case "low": return "info";
+    default: return "default";
+  }
+}
+
 export interface ToDoTableProps {
   onOpen?: (id: string) => void;
-  selection?: SelectionApi;
-  orderedIds?: string[];
+  groupedTodos?: import("../../hooks/useTodoTableState").TodoGroup[];
 }
 
 export function ToDoTable(props: ToDoTableProps) {
-  const { onOpen, selection } = props;
-  const { todos, isLoading, error, refetch } = useTodos();
+  const { onOpen, groupedTodos } = props;
+  const { isLoading, error, refetch } = useTodos();
+  const contextMenu = useContextMenu();
+  const { updateDoc } = useFrappeUpdateDoc();
 
-  const allChecked = !!selection && selection.state.selected.size === todos.length;
-  const someChecked = !!selection && selection.state.selected.size > 0 && !allChecked;
+  // Track collapsed groups
+  const [collapsedGroups, setCollapsedGroups] = React.useState<Set<string>>(new Set());
+
+  // Flatten grouped todos for selection logic
+  const todos = React.useMemo(() => {
+    if (!groupedTodos) return [];
+    return groupedTodos.flatMap(group => group.todos);
+  }, [groupedTodos]);
+
+  const handleToggleComplete = async (todo: import("../../hooks/useTodos").Todo) => {
+    try {
+      const newStatus = todo.status === "Closed" ? "Open" : "Closed";
+      await updateDoc("ToDo", todo.id, { status: newStatus });
+      refetch();
+    } catch (error) {
+      console.error("Failed to update todo status:", error);
+    }
+  };
+
+  const toggleGroupCollapse = (groupKey: string) => {
+    setCollapsedGroups(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupKey)) {
+        newSet.delete(groupKey);
+      } else {
+        newSet.add(groupKey);
+      }
+      return newSet;
+    });
+  };
 
   if (error) {
     return (
@@ -70,79 +127,139 @@ export function ToDoTable(props: ToDoTableProps) {
   }
 
   return (
-    <Paper variant="outlined" sx={{ width: "100%", overflow: "auto" }} aria-label="ToDo table">
-      <Table size="medium">
+    <Paper variant="outlined" sx={{ width: "100%", overflowX: "auto" }} aria-label="ToDo table">
+      <Table size="medium" aria-label="ToDo data table" sx={{ minWidth: 650 }}>
         <TableHead>
-          <TableRow sx={{ "& th": { fontWeight: 600, borderBottom: "1px solid", borderColor: "divider", bgcolor: "background.default" } }}>
-            <TableCell padding="checkbox">
-              <Checkbox
-                inputProps={{ "aria-label": "Select all" }}
-                indeterminate={someChecked}
-                checked={allChecked}
-                onChange={() => {
-                  if (!selection) return;
-                  if (allChecked) {
-                    todos.forEach(r => {
-                      if (selection.isSelected(r.id)) selection.toggle(r.id);
-                    });
-                  } else {
-                    todos.forEach(r => {
-                      if (!selection.isSelected(r.id)) selection.toggle(r.id);
-                    });
-                  }
-                }}
-              />
-            </TableCell>
-            <TableCell sx={{ width: { xs: "40%", md: "45%" } }}>Subject</TableCell>
+          <TableRow
+            sx={{
+              "& th": {
+                fontWeight: 700,
+                borderBottom: "1px solid",
+                borderColor: "divider",
+                bgcolor: (theme) => theme.palette.mode === "dark" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)"
+              }
+            }}
+          >
+            <TableCell sx={{ width: { xs: "40%", md: "50%" } }}>Subject</TableCell>
             <TableCell>Status</TableCell>
             <TableCell>Priority</TableCell>
             <TableCell>Assignee</TableCell>
-            <TableCell>Project</TableCell>
-            <TableCell align="right">Updated</TableCell>
+            <TableCell sx={{ width: 60 }}>Complete</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {todos.map(r => {
-            const checked = selection ? selection.isSelected(r.id) : false;
-            return (
-              <TableRow
-                key={r.id}
-                hover
-                role="row"
-                onClick={() => onOpen?.(r.id)}
-                sx={{ cursor: "pointer" }}
-              >
-                <TableCell padding="checkbox" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                  <Checkbox
-                    checked={checked}
-                    onChange={() => selection?.toggle(r.id)}
-                    inputProps={{ "aria-label": `Select ${r.subject}` }}
-                  />
-                </TableCell>
-                <TableCell>
-                  {/* Allow up to 2 lines with ellipsis to avoid horizontal scrolling */}
-                  <Typography
+          {groupedTodos?.map((group) => (
+            <React.Fragment key={group.key}>
+              {/* Group Header - only show if there are multiple groups */}
+              {groupedTodos.length > 1 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
                     sx={{
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden"
+                      bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100',
+                      color: (theme) => theme.palette.mode === 'dark' ? 'grey.100' : 'grey.800',
+                      fontWeight: 600,
+                      py: 1,
+                      borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      '&:hover': {
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.700' : 'grey.200',
+                      }
                     }}
-                    title={r.subject}
+                    onClick={() => toggleGroupCollapse(group.key)}
                   >
-                    {r.subject}
-                  </Typography>
-                </TableCell>
-                <TableCell><Typography variant="body2">{r.status || ""}</Typography></TableCell>
-                <TableCell><Typography variant="body2">{r.priority || ""}</Typography></TableCell>
-                <TableCell><Typography variant="body2" noWrap>{r.assignee || ""}</Typography></TableCell>
-                <TableCell><Typography variant="body2" noWrap>{r.project || ""}</Typography></TableCell>
-                <TableCell align="right"><Typography variant="body2" color="text.secondary">{r.updatedAt || ""}</Typography></TableCell>
-              </TableRow>
-            );
-          })}
+                    <Box display="flex" alignItems="center" gap={1}>
+                      {collapsedGroups.has(group.key) ? (
+                        <ExpandMoreIcon fontSize="small" />
+                      ) : (
+                        <ExpandLessIcon fontSize="small" />
+                      )}
+                      <span>{group.label} ({group.todos.length})</span>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {/* Group Items */}
+              {!collapsedGroups.has(group.key) && group.todos.map((r) => {
+                return (
+                  <TableRow
+                    key={r.id}
+                    hover
+                    role="row"
+                    onClick={() => onOpen?.(r.id)}
+                    onContextMenu={(e) => contextMenu.handleContextMenu(e, r)}
+                    sx={{ cursor: "pointer" }}
+                  >
+                    <TableCell>
+                      <Box>
+                        <Typography
+                          sx={{
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden"
+                          }}
+                          title={r.subject}
+                        >
+                          {r.subject}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {r.updatedAt ? new Date(r.updatedAt).toLocaleDateString() : ""}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        size="small"
+                        label={r.status || "No Status"}
+                        color={getStatusColor(r.status)}
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        size="small"
+                        label={r.priority || "No Priority"}
+                        color={getPriorityColor(r.priority)}
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" noWrap>{r.assignee || "Unassigned"}</Typography>
+                    </TableCell>
+                    <TableCell sx={{ width: 60 }} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                      <Tooltip title={r.status === "Closed" ? "Mark as incomplete" : "Mark as complete"}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleToggleComplete(r)}
+                          color={r.status === "Closed" ? "success" : "default"}
+                        >
+                          {r.status === "Closed" ? (
+                            <CheckCircleIcon />
+                          ) : (
+                            <RadioButtonUncheckedIcon />
+                          )}
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </React.Fragment>
+          ))}
         </TableBody>
       </Table>
+
+      <ToDoContextMenu
+        anchorEl={contextMenu.anchorEl}
+        open={contextMenu.open}
+        onClose={contextMenu.handleClose}
+        todo={contextMenu.selectedTodo}
+        onOpen={onOpen}
+        onRefresh={refetch}
+      />
     </Paper>
   );
 }

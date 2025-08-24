@@ -132,83 +132,197 @@ export default defineConfig({
 
 ## CSRF Token Management
 
-### The Critical Issue
+This section reflects a robust, production-ready pattern verified in the Workz app. It ensures CSRF is always available to the SPA before any network activity, avoiding intermittent CSRFTokenError during PUT/POST/DELETE.
 
-**Problem**: Frappe requires CSRF tokens for all POST/PUT/DELETE requests, but React apps running on different ports don't automatically get these tokens.
+Key principles:
+- Serve your SPA under a Frappe website route (same origin) so cookies and CSRF are first-class.
+- Embed CSRF and boot context into the HTML before your bundle executes.
+- Always send credentials: "include" and X-Requested-With: XMLHttpRequest for mutating requests.
+- Use a central client helper to attach X-Frappe-CSRF-Token.
 
-**Solution**: Create a website route that injects Frappe context into your React app.
+Recommended implementation (as used by Workz)
 
-### 1. Website Route Handler
+1) Website Route Handler
+File: workz/www/workz/index.py
 
-**File: `www/your_app.py`**
+```python
+import frappe
+from frappe import _
+import re
+import json
+
+SCRIPT_TAG_PATTERN = re.compile(r"\<script[^<]*\</script\>")
+CLOSING_SCRIPT_TAG_PATTERN = re.compile(r"</script\>")
+
+def get_context(context):
+    context.no_cache = 1
+
+    try:
+        user_id = frappe.session.user  # "Guest" if not logged in
+        if user_id == "Guest":
+            raise frappe.AuthenticationError(_("Authentication failed. Please log in again."))
+        else:
+            try:
+                boot = frappe.sessions.get()
+            except Exception as e:
+                raise frappe.SessionBootFailed from e
+
+        # Serialize and sanitize boot JSON to safely embed in HTML
+        boot_json = frappe.as_json(boot, indent=None, separators=(",", ":"))
+        boot_json = SCRIPT_TAG_PATTERN.sub("", boot_json)
+        boot_json = CLOSING_SCRIPT_TAG_PATTERN.sub("", boot_json)
+        boot_json = json.dumps(boot_json)
+
+        context.update({
+            "build_version": frappe.utils.get_build_version(),
+            "boot": boot_json,
+        })
+
+        # Optional: additional user context for SPA
+        full_name = frappe.utils.get_fullname(user_id)
+        roles = frappe.get_roles(user_id)
+        email = user_id if "@" in (user_id or "") else None
+        user_info = {
+            "name": user_id,
+            "full_name": full_name,
+            "email": email,
+            "roles": roles,
+        }
+
+        site = getattr(frappe.local, "site", None)
+        context.workz_boot = {
+            "site": site,
+            "user": user_info,
+            "app": {
+                "name": "workz",
+                "version": getattr(frappe, "__version__", None),
+            },
+        }
+    except Exception:
+        # If something goes wrong, do not render SPA
+        raise frappe.AuthenticationError(_("Authentication failed. Please log in again."))
+
+    return context
+```
+
+2) HTML Template with CSRF + Boot Injection
+File: workz/www/workz/index.html
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Workz ToDo Manager</title>
+    <link rel="icon" href="/assets/workz/frontend/favicon.ico" />
+    <!-- Your built bundle -->
+    <script type="module" crossorigin src="/assets/workz/frontend/index-<your-hash>.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      // Embed CSRF token and boot before the app runs
+      window.csrf_token = '{{ frappe.session.csrf_token }}';
+
+      if (!window.frappe) window.frappe = {};
+      // 'boot' is a JSON string escaped and sanitized in index.py, parse it here
+      frappe.boot = JSON.parse({{ boot }});
+    </script>
+  </body>
+</html>
+```
+
+For local dev with Vite, you can mirror the same pattern in frontend/index.html so the app works both in dev and in Frappe:
+File: frontend/index.html
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Workz ToDo Manager</title>
+    <link rel="icon" href="./favicon.ico" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      window.csrf_token = '{{ frappe.session.csrf_token }}';
+      if (!window.frappe) window.frappe = {};
+      frappe.boot = JSON.parse({{ boot }});
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+```
+
+3) React App initialization (same-origin cookie flow)
+Keep it simple and explicit. The provider URL should be the same origin that serves your SPA route so cookies are used automatically.
+
+File: frontend/src/main.tsx
+
+```tsx
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
+import { FrappeProvider } from "frappe-react-sdk";
+import App from "./App";
+
+const theme = createTheme({ palette: { mode: "light" } });
+
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+  <React.StrictMode>
+    <FrappeProvider url={window.location.origin}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <App />
+      </ThemeProvider>
+    </FrappeProvider>
+  </React.StrictMode>
+);
+```
+
+4) Centralized client helpers for CSRF + JSON
+Implement a single place to attach CSRF, AJAX header, and credentials for all mutating requests. This prevents subtle inconsistencies across components.
+
+File: frontend/src/lib/csrf.ts
+- getCsrfToken(): try cookie "frappe-csrf-token" → window.csrf_token (embedded) → GET /api/method/workz.workz.api.security.csrf_token
+
+File: frontend/src/lib/api.ts
+- requestJSON(): sets Accept, Content-Type (where needed), credentials: "include"
+- For POST/PUT/PATCH/DELETE: adds X-Requested-With: XMLHttpRequest and X-Frappe-CSRF-Token from getCsrfToken()
+- Exposes getJSON/postJSON/putJSON/patchJSON/delJSON
+
+5) Optional server endpoint to fetch CSRF (for SPA safety)
+Useful in cases where user arrived at SPA without hitting Desk pages that set the CSRF cookie.
+
+File: workz/workz/api/security.py
 
 ```python
 import frappe
 
-def get_context(context):
-    # This makes Frappe boot data available to the frontend
-    context.boot = frappe.sessions.get()
-    return context
+@frappe.whitelist()
+def csrf_token():
+    if frappe.session.user == "Guest":
+        frappe.throw("Login required", frappe.PermissionError)
+    return {"csrf_token": frappe.sessions.get_csrf_token()}
 ```
 
-### 2. HTML Template with Context Injection
+6) Verified request headers for mutating calls
+Every PUT/POST/DELETE should include:
+- Cookie: sid (session)
+- Header: X-Frappe-CSRF-Token: <token>
+- Header: X-Requested-With: XMLHttpRequest
+- Header: Content-Type: application/json
+- Header: Accept: application/json
+- fetch option: credentials: "include"
 
-**File: `www/your_app.html`**
-
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your App</title>
-    <script>
-        // CRITICAL: Inject Frappe context before React loads
-        window.frappe_boot = {{ boot | tojson }};
-        window.frappeBootAvailable = true;
-    </script>
-</head>
-<body>
-    <div id="root"></div>
-    <script type="module" src="http://localhost:8080/src/main.tsx"></script>
-</body>
-</html>
-```
-
-### 3. React App CSRF Integration
-
-**File: `frontend/src/main.tsx`**
-
-```typescript
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { FrappeProvider } from 'frappe-react-sdk'
-import App from './App.tsx'
-import './index.css'
-
-// Wait for Frappe boot data to be available
-const initializeApp = () => {
-  if (window.frappeBootAvailable && window.frappe_boot) {
-    const siteName = window.frappe_boot.sitename || window.location.hostname;
-    
-    ReactDOM.createRoot(document.getElementById('root')!).render(
-      <React.StrictMode>
-        <FrappeProvider
-          siteName={siteName}
-          url={window.location.origin}
-        >
-          <App />
-        </FrappeProvider>
-      </React.StrictMode>,
-    )
-  } else {
-    // Retry if boot data not ready
-    setTimeout(initializeApp, 100);
-  }
-};
-
-initializeApp();
-```
+Troubleshooting checklist
+- Confirm cookies present at /workz load time (sid and frappe-csrf-token). If not, log in and reload /workz.
+- Verify window.csrf_token is set (check in DevTools console).
+- Ensure your component uses the centralized helper (api.ts) and not ad-hoc fetch.
+- If using a dev server on a different origin, ensure CORS is correctly configured and credentials are included, or prefer a Vite proxy to keep same-origin semantics.
 
 ---
 

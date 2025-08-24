@@ -27,42 +27,41 @@ export interface ToDoActivityProps {
 function renderActivityItem(item: ActivityItem) {
   switch (item.type) {
     case "status_change": {
-      const from = (item.meta as any)?.from ?? "unknown";
-      const to = (item.meta as any)?.to ?? "unknown";
       return (
         <ListItem alignItems="flex-start" key={item.id}>
           <ListItemAvatar>
-            <Avatar variant="rounded">S</Avatar>
+            <Avatar variant="rounded" sx={{ bgcolor: "primary.main" }}>S</Avatar>
           </ListItemAvatar>
           <ListItemText
             primary={
-              <Typography variant="body2">
-                Status changed from <b>{from}</b> to <b>{to}</b>
-              </Typography>
+              <Stack direction="row" spacing={1} alignItems="baseline">
+                <Typography variant="body2">{item.author?.name || "User"}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {new Date(item.createdAt).toLocaleString()}
+                </Typography>
+              </Stack>
             }
-            secondary={
-              <Typography variant="caption" color="text.secondary">
-                {new Date(item.createdAt).toLocaleString()}
-              </Typography>
-            }
+            secondary={<Typography variant="body2">{item.content}</Typography>}
           />
         </ListItem>
       );
     }
     case "assignment": {
-      const assignee = (item.meta as any)?.assignee ?? "unknown";
       return (
         <ListItem alignItems="flex-start" key={item.id}>
           <ListItemAvatar>
-            <Avatar variant="rounded">A</Avatar>
+            <Avatar variant="rounded" sx={{ bgcolor: "secondary.main" }}>A</Avatar>
           </ListItemAvatar>
           <ListItemText
-            primary={<Typography variant="body2">Assigned to <b>{assignee}</b></Typography>}
-            secondary={
-              <Typography variant="caption" color="text.secondary">
-                {new Date(item.createdAt).toLocaleString()}
-              </Typography>
+            primary={
+              <Stack direction="row" spacing={1} alignItems="baseline">
+                <Typography variant="body2">{item.author?.name || "User"}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {new Date(item.createdAt).toLocaleString()}
+                </Typography>
+              </Stack>
             }
+            secondary={<Typography variant="body2">{item.content}</Typography>}
           />
         </ListItem>
       );

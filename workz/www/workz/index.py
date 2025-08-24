@@ -10,6 +10,9 @@ CLOSING_SCRIPT_TAG_PATTERN = re.compile(r"</script\>")
 
 def get_context(context):
     context.no_cache = 1
+    context.full_width = 1
+    context.no_breadcrumbs = 1
+    context.hide_toolbar = 1
 
     # --- 1. Set CSRF cookie for SPA ---
     try:

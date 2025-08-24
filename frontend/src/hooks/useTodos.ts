@@ -24,7 +24,8 @@ export interface FrappeToDo {
 export interface Todo {
   id: string;
   subject: string;
-  project?: string | null;
+  referenceType?: string | null;
+  referenceName?: string | null;
   assignee?: string | null;
   priority?: string | null;
   status?: string | null;
@@ -36,7 +37,8 @@ function mapFrappeToTodo(row: FrappeToDo): Todo {
   return {
     id: row.name,
     subject: row.description || "",
-    project: row.reference_name ?? null,
+    referenceType: row.reference_type ?? null,
+    referenceName: row.reference_name ?? null,
     assignee: row.allocated_to ?? null,
     priority: row.priority ?? null,
     status: row.status ?? null,
