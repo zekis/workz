@@ -1,0 +1,16 @@
+{
+  "index": "Introduction",
+  "setup": "Setup",
+  "authentication": "Authentication",
+  "database": "Database",
+  "api_calls": "API Calls",
+  "file_uploads": "File Uploads",
+  "search": "Search",
+  "realtime_events": "Realtime Events",
+  "contact": {
+    "title": "Contact ↗",
+    "type": "page",
+    "href": "https://twitter.com/nik_kothari22",
+    "newWindow": true
+  }
+}

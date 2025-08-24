@@ -228,6 +228,15 @@ app_license = "mit"
 # 	}
 # ]
 
+# workz/hooks.py
+website_route_rules = [
+    # ensure /workz resolves (usually redundant, but explicit)
+    {"from_route": "/workz", "to_route": "workz"},
+    # catch-all: /workz/... -> /workz
+    {"from_route": "/workz/<path:subpath>", "to_route": "workz"},
+]
+
+
 # Authentication and authorization
 # --------------------------------
 
