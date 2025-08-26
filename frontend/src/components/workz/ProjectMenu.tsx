@@ -39,6 +39,7 @@ import {
 } from "@mui/icons-material";
 import type { Todo } from "../../hooks/useTodos";
 import { useReferenceResolver } from "../../hooks/useReferenceResolver";
+import { ProjectMenuContextMenu } from "./ProjectMenuContextMenu";
 
 export interface ProjectMenuProps {
   todos: Todo[];
@@ -63,6 +64,15 @@ export function ProjectMenu(props: ProjectMenuProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [expandedTypes, setExpandedTypes] = React.useState<Set<string>>(new Set(["Project"]));
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = React.useState<{
+    mouseX: number;
+    mouseY: number;
+    referenceType: string;
+    referenceName: string;
+    displayName: string;
+  } | null>(null);
 
   // Use reference resolver to get display names
   const { resolveReference } = useReferenceResolver(todos);
@@ -154,6 +164,28 @@ export function ProjectMenu(props: ProjectMenuProps) {
       newExpanded.add(refType);
     }
     setExpandedTypes(newExpanded);
+  };
+
+  const handleContextMenu = (
+    event: React.MouseEvent,
+    referenceType: string,
+    referenceName: string,
+    displayName: string
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    setContextMenu({
+      mouseX: event.clientX + 2,
+      mouseY: event.clientY - 6,
+      referenceType,
+      referenceName,
+      displayName
+    });
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenu(null);
   };
 
   const getIconForReferenceType = (refType: string) => {
@@ -285,6 +317,12 @@ export function ProjectMenu(props: ProjectMenuProps) {
                             <ListItemButton
                               selected={isProjectSelected}
                               onClick={() => handleReferenceClick(projectKey)}
+                              onContextMenu={(e) => handleContextMenu(
+                                e,
+                                reference.key,
+                                projectName,
+                                resolveReference(reference.key, projectName)
+                              )}
                               sx={{
                                 mx: 1,
                                 ml: 3, // Indent sub-items
@@ -390,6 +428,19 @@ export function ProjectMenu(props: ProjectMenuProps) {
       >
         {drawerContent}
       </Drawer>
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <ProjectMenuContextMenu
+          open={Boolean(contextMenu)}
+          onClose={handleCloseContextMenu}
+          mouseX={contextMenu.mouseX}
+          mouseY={contextMenu.mouseY}
+          referenceType={contextMenu.referenceType}
+          referenceName={contextMenu.referenceName}
+          displayName={contextMenu.displayName}
+        />
+      )}
     </>
   );
 }

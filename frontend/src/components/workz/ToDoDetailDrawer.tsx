@@ -61,7 +61,7 @@ export function ToDoDetailDrawer(props: ToDoDetailDrawerProps) {
   const [referenceName, setReferenceName] = React.useState("");
 
   const { updateDoc, loading: isSaving } = useFrappeUpdateDoc();
-  const { deleteDoc } = useFrappeDeleteDoc();
+  const { deleteDoc, loading: isDeleting } = useFrappeDeleteDoc();
 
   // Fetch available reference documents based on selected type
   const { documents: referenceDocuments, isLoading: isLoadingDocs } = useReferenceDocuments(referenceType);
@@ -151,13 +151,21 @@ export function ToDoDetailDrawer(props: ToDoDetailDrawerProps) {
   };
 
   const handleDelete = async () => {
-    if (!todoId) return;
+    if (!todoId) {
+      console.error("No todoId provided for delete operation");
+      return;
+    }
+
+    console.log("Attempting to delete todo:", todoId);
+
     try {
       await deleteDoc("ToDo", todoId);
+      console.log("Todo deleted successfully:", todoId);
       setSnack({ open: true, severity: "success", message: "ToDo deleted." });
       onRefresh?.();
       onClose();
     } catch (err: any) {
+      console.error("Failed to delete todo:", err);
       setSnack({
         open: true,
         severity: "error",
@@ -228,6 +236,7 @@ export function ToDoDetailDrawer(props: ToDoDetailDrawerProps) {
                 aria-label="Delete todo"
                 onClick={() => setDeleteDialog(true)}
                 color="error"
+                disabled={isDeleting}
               >
                 <DeleteIcon />
               </IconButton>
@@ -508,8 +517,17 @@ export function ToDoDetailDrawer(props: ToDoDetailDrawerProps) {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialog(false)}>Cancel</Button>
-          <Button onClick={handleDelete} variant="contained" color="error">Delete</Button>
+          <Button onClick={() => setDeleteDialog(false)} disabled={isDeleting}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDelete}
+            variant="contained"
+            color="error"
+            disabled={isDeleting}
+          >
+            {isDeleting ? "Deleting..." : "Delete"}
+          </Button>
         </DialogActions>
       </Dialog>
     </Dialog>

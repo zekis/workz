@@ -17,9 +17,20 @@ import {
   Typography
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import {
+  FolderOpen as ProjectIcon,
+  Assignment as ActivityIcon,
+  Email as CommunicationIcon,
+  Task as TaskIcon,
+  BugReport as IssueIcon,
+  Description as DocumentIcon,
+  Inbox as UnassignedIcon
+} from "@mui/icons-material";
 import { useTodos } from "../../hooks/useTodos";
 import { useContextMenu } from "../../hooks/useContextMenu";
 import { ToDoContextMenu } from "./ToDoContextMenu";
+import { useSubtaskCounts } from "../../hooks/useSubtaskCounts";
+import { SubtaskProgress } from "./SubtaskProgress";
 
 // Helper functions for colors (same as table)
 function getStatusColor(status: string | null | undefined): "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning" {
@@ -42,6 +53,20 @@ function getPriorityColor(priority: string | null | undefined): "default" | "pri
   }
 }
 
+function getReferenceIcon(referenceType: string | null | undefined) {
+  switch (referenceType?.toLowerCase()) {
+    case "project": return <ProjectIcon fontSize="small" color="primary" />;
+    case "activity": return <ActivityIcon fontSize="small" color="secondary" />;
+    case "communication": return <CommunicationIcon fontSize="small" color="info" />;
+    case "task": return <TaskIcon fontSize="small" color="warning" />;
+    case "issue": return <IssueIcon fontSize="small" color="error" />;
+    case "":
+    case null:
+    case undefined: return <UnassignedIcon fontSize="small" color="disabled" />;
+    default: return <DocumentIcon fontSize="small" color="action" />;
+  }
+}
+
 export interface ToDoListMobileProps {
   onOpen?: (id: string) => void;
   groupedTodos?: import("../../hooks/useTodoTableState").TodoGroup[];
@@ -51,6 +76,15 @@ export function ToDoListMobile(props: ToDoListMobileProps) {
   const { onOpen, groupedTodos } = props;
   const { isLoading, error, refetch } = useTodos();
   const contextMenu = useContextMenu();
+
+  // Get all todo IDs for subtask count fetching
+  const todoIds = React.useMemo(() => {
+    if (!groupedTodos) return [];
+    return groupedTodos.flatMap(group => group.todos.map(todo => todo.id));
+  }, [groupedTodos]);
+
+  // Fetch subtask counts for all todos
+  const { getSubtaskCount } = useSubtaskCounts(todoIds);
 
   // Flatten grouped todos
   const todos = React.useMemo(() => {
@@ -97,6 +131,11 @@ export function ToDoListMobile(props: ToDoListMobileProps) {
           <CardActionArea onClick={() => onOpen?.(item.id)}>
             <CardContent>
               <Stack direction="row" alignItems="flex-start" spacing={1}>
+                {/* Reference Type Icon */}
+                <Box sx={{ mt: 0.25, flexShrink: 0 }}>
+                  {getReferenceIcon(item.referenceType)}
+                </Box>
+
                 <Box flex={1} minWidth={0}>
                   {/* Clamp subject to 2 lines for consistency with table */}
                   <Typography
@@ -111,6 +150,13 @@ export function ToDoListMobile(props: ToDoListMobileProps) {
                   >
                     {item.subject}
                   </Typography>
+
+                  {/* Subtask Progress */}
+                  <SubtaskProgress
+                    subtaskCount={getSubtaskCount(item.id)}
+                    variant="compact"
+                  />
+
                   <Typography variant="caption" color="text.secondary">
                     {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : ""}
                   </Typography>
