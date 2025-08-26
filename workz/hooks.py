@@ -3,6 +3,7 @@ app_title = "Workz"
 app_publisher = "TierneyMorris Pty Ltd"
 app_description = "Todo manager for frappe"
 app_email = "support@sgcaustralia.com.au"
+app_logo = "/assets/workz/todo.png"
 app_license = "mit"
 
 # Apps
@@ -15,7 +16,7 @@ add_to_apps_screen = [
 	{
 		"name": "workz",
 		"logo": "/assets/workz/todo.png",
-		"title": "Workz",
+		"title": "Tasks",
 		"route": "/workz"
 	}
 ]
