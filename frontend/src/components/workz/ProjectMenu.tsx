@@ -38,6 +38,7 @@ import {
   LightMode as LightModeIcon
 } from "@mui/icons-material";
 import type { Todo } from "../../hooks/useTodos";
+import { useReferenceResolver } from "../../hooks/useReferenceResolver";
 
 export interface ProjectMenuProps {
   todos: Todo[];
@@ -62,6 +63,9 @@ export function ProjectMenu(props: ProjectMenuProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [expandedTypes, setExpandedTypes] = React.useState<Set<string>>(new Set(["Project"]));
+
+  // Use reference resolver to get display names
+  const { resolveReference } = useReferenceResolver(todos);
 
   // Calculate reference statistics
   const referenceStats = React.useMemo(() => {
@@ -305,7 +309,7 @@ export function ProjectMenu(props: ProjectMenuProps) {
                                 )}
                               </ListItemIcon>
                               <ListItemText
-                                primary={projectName}
+                                primary={resolveReference(reference.key, projectName)}
                                 primaryTypographyProps={{
                                   variant: "body2",
                                   fontWeight: isProjectSelected ? 600 : 400

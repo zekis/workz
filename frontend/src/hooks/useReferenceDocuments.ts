@@ -1,20 +1,23 @@
 /**
  * useReferenceDocuments
  * - Fetches available documents for a given reference type
+ * - Uses doctype title_field for display when available
  * - Returns list of documents that can be referenced in todos
  */
 import { useFrappeGetDocList } from "frappe-react-sdk";
+import { useDoctypeMeta } from "./useDoctypeMeta";
 
 export interface ReferenceDocument {
   name: string;
-  title?: string;
-  subject?: string;
-  project_name?: string;
+  title: string;
+  displayValue: string; // The value to show in UI (from title_field or name)
 }
 
 export function useReferenceDocuments(referenceType: string | null) {
-  // Use basic fields that are commonly available
-  // We'll try to get a display field but fall back to name if not available
+  // Get doctype metadata to find title_field (simplified for now)
+  const { meta, isLoading: isLoadingMeta } = useDoctypeMeta(referenceType);
+
+  // Determine fields to fetch (simplified - just name for now)
   const fields = ["name"];
 
   // Only make API call if we have a valid reference type
@@ -34,24 +37,29 @@ export function useReferenceDocuments(referenceType: string | null) {
   );
 
   // Only use the results if we should fetch
-  const { data, error, isLoading } = shouldFetch ? hookResult : {
+  const { data, error, isLoading: isLoadingDocs } = shouldFetch ? hookResult : {
     data: null,
     error: null,
     isLoading: false
   };
 
-  // Transform data to consistent format
+  // Transform data to consistent format (simplified)
   const documents: ReferenceDocument[] = shouldFetch && data ?
-    data.map((doc: any) => ({
-      name: doc.name,
-      title: doc.name, // Just use the name as title for now
-      subject: undefined,
-      project_name: undefined
-    })) : [];
+    data.map((doc: any) => {
+      // For now, just use the document name as display value
+      const displayValue = doc.name;
+
+      return {
+        name: doc.name,
+        title: displayValue,
+        displayValue: displayValue
+      };
+    }) : [];
 
   return {
     documents,
-    isLoading: shouldFetch ? isLoading : false,
-    error: shouldFetch ? error : null
+    isLoading: shouldFetch ? isLoadingDocs : false,
+    error: shouldFetch ? error : null,
+    titleField: undefined // Simplified for now
   };
 }

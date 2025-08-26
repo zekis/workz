@@ -18,6 +18,7 @@ import { useTodos, Todo } from "../hooks/useTodos";
 import { useTodoTableState } from "../hooks/useTodoTableState";
 import { useThemeContext } from "../contexts/ThemeContext";
 import { useFrappeCreateDoc, useFrappeAuth } from "frappe-react-sdk";
+import { useReferenceResolver } from "../hooks/useReferenceResolver";
 
 export function WorkzTodoManager() {
   const { useCards } = useMobileView();
@@ -28,6 +29,9 @@ export function WorkzTodoManager() {
 
   // Auth hook for current user
   const { currentUser } = useFrappeAuth();
+
+  // Reference resolver for display names
+  const { resolveReference } = useReferenceResolver(todosQuery.todos || []);
 
   // Quick create hook
   const { createDoc: createTodo } = useFrappeCreateDoc();
@@ -68,14 +72,15 @@ export function WorkzTodoManager() {
     setSelectedReference(null);
   };
 
-  // Format active filter display
+  // Format active filter display with resolved names
   const getActiveFilterDisplay = (reference: string | null): string | null => {
     if (!reference) return null;
 
     if (reference === "No Reference") return "No Reference";
     if (reference.includes(":")) {
       const [type, name] = reference.split(":");
-      return `${type}: ${name}`;
+      const displayName = resolveReference(type, name);
+      return `${type}: ${displayName}`;
     }
     return reference;
   };

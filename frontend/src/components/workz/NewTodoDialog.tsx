@@ -208,7 +208,7 @@ export function NewTodoDialog(props: NewTodoDialogProps) {
               <MenuItem value="">None</MenuItem>
               {referenceDocuments.map((doc) => (
                 <MenuItem key={doc.name} value={doc.name}>
-                  {doc.title || doc.name}
+                  {doc.displayValue}
                 </MenuItem>
               ))}
             </TextField>

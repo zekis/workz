@@ -377,7 +377,7 @@ export function ToDoDetailDrawer(props: ToDoDetailDrawerProps) {
             <MenuItem value="">None</MenuItem>
             {referenceDocuments.map((doc) => (
               <MenuItem key={doc.name} value={doc.name}>
-                {doc.title || doc.name}
+                {doc.displayValue}
               </MenuItem>
             ))}
           </TextField>
