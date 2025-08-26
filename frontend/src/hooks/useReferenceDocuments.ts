@@ -17,11 +17,15 @@ export function useReferenceDocuments(referenceType: string | null) {
   // We'll try to get a display field but fall back to name if not available
   const fields = ["name"];
 
-  const { data, error, isLoading } = useFrappeGetDocList(
-    referenceType || "", // Use empty string when no type
+  // Only make API call if we have a valid reference type
+  const shouldFetch = Boolean(referenceType && referenceType.trim());
+
+  // Conditionally call the hook - only when we have a valid reference type
+  const hookResult = useFrappeGetDocList(
+    referenceType || "ToDo", // Fallback to a valid doctype
     {
       fields,
-      limit: 100, // Reasonable limit for dropdown
+      limit: shouldFetch ? 100 : 0, // Set limit to 0 to prevent fetching when not needed
       orderBy: {
         field: "modified",
         order: "desc"
@@ -29,8 +33,15 @@ export function useReferenceDocuments(referenceType: string | null) {
     }
   );
 
+  // Only use the results if we should fetch
+  const { data, error, isLoading } = shouldFetch ? hookResult : {
+    data: null,
+    error: null,
+    isLoading: false
+  };
+
   // Transform data to consistent format
-  const documents: ReferenceDocument[] = referenceType && data ?
+  const documents: ReferenceDocument[] = shouldFetch && data ?
     data.map((doc: any) => ({
       name: doc.name,
       title: doc.name, // Just use the name as title for now
@@ -40,7 +51,7 @@ export function useReferenceDocuments(referenceType: string | null) {
 
   return {
     documents,
-    isLoading: referenceType ? isLoading : false,
-    error: referenceType ? error : null
+    isLoading: shouldFetch ? isLoading : false,
+    error: shouldFetch ? error : null
   };
 }

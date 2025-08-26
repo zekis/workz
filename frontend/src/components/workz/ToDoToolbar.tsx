@@ -7,6 +7,7 @@ import React from "react";
 import {
   Box,
   Button,
+  ButtonGroup,
   Stack,
   TextField,
   Typography,
@@ -19,7 +20,8 @@ import {
   Tooltip,
   Collapse,
   useMediaQuery,
-  useTheme
+  useTheme,
+  Menu
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -29,9 +31,11 @@ import {
   ExpandLess as ExpandLessIcon,
   Menu as MenuIcon,
   Close as CloseIcon,
-  AutoAwesome as MagicIcon
+  AutoAwesome as MagicIcon,
+  ArrowDropDown as ArrowDropDownIcon
 } from "@mui/icons-material";
 import { NewTodoDialog } from "./NewTodoDialog";
+import { AssigneeAvatars } from "./AssigneeAvatars";
 
 export interface ToDoToolbarProps {
   searchQuery?: string;
@@ -59,7 +63,7 @@ export interface ToDoToolbarProps {
   menuOpen?: boolean;
   activeFilter?: string | null;
   onClearFilter?: () => void;
-  onQuickCreate?: (subject: string) => void;
+  onOpenAIDialog?: () => void;
 }
 
 export function ToDoToolbar(props: ToDoToolbarProps) {
@@ -89,32 +93,32 @@ export function ToDoToolbar(props: ToDoToolbarProps) {
     menuOpen = false,
     activeFilter,
     onClearFilter,
-    onQuickCreate
+    onOpenAIDialog
   } = props;
 
   const [newTodoDialog, setNewTodoDialog] = React.useState(false);
-  const [filtersExpanded, setFiltersExpanded] = React.useState(false);
-  const [quickCreateText, setQuickCreateText] = React.useState("");
+  const [filtersExpanded, setFiltersExpanded] = React.useState(true);
+  const [newMenuAnchor, setNewMenuAnchor] = React.useState<null | HTMLElement>(null);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const handleCreateTodo = () => {
     setNewTodoDialog(true);
+    setNewMenuAnchor(null);
   };
 
-  const handleQuickCreate = () => {
-    if (quickCreateText.trim()) {
-      onQuickCreate?.(quickCreateText.trim());
-      setQuickCreateText("");
-    }
+  const handleOpenAIDialog = () => {
+    onOpenAIDialog?.();
+    setNewMenuAnchor(null);
   };
 
-  const handleQuickCreateKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleQuickCreate();
-    }
+  const handleNewMenuClick = (event: React.MouseEvent<HTMLElement>) => {
+    setNewMenuAnchor(event.currentTarget);
+  };
+
+  const handleNewMenuClose = () => {
+    setNewMenuAnchor(null);
   };
 
   const clearFilters = () => {
@@ -152,69 +156,65 @@ export function ToDoToolbar(props: ToDoToolbarProps) {
           )}
         </Stack>
 
-        <Stack direction="row" spacing={1} alignItems="center" flex={1}>
-          {/* Quick Create Text Field - Medium/Large screens only */}
-          {!isMobile && (
-            <TextField
-              size="small"
-              placeholder="Quick create todo... ✨ AI coming soon"
-              value={quickCreateText}
-              onChange={(e) => setQuickCreateText(e.target.value)}
-              onKeyPress={handleQuickCreateKeyPress}
-              sx={{
-                flex: 1,
-                "& .MuiInputBase-input::placeholder": {
-                  fontSize: "0.875rem"
-                }
-              }}
-              InputProps={{
-                endAdornment: quickCreateText.trim() && (
-                  <IconButton
-                    size="small"
-                    onClick={handleQuickCreate}
-                    aria-label="Create todo"
-                    sx={{ mr: -1 }}
-                  >
-                    <AddIcon fontSize="small" />
-                  </IconButton>
-                ),
-                startAdornment: (
-                  <MagicIcon
-                    fontSize="small"
-                    sx={{
-                      mr: 1,
-                      color: "text.secondary",
-                      opacity: 0.6
-                    }}
-                  />
-                )
-              }}
-            />
-          )}
-
-          {/* Mobile Filter Toggle */}
-          {isMobile && (
-            <IconButton
-              onClick={() => setFiltersExpanded(!filtersExpanded)}
-              aria-label="Toggle filters"
-            >
-              {filtersExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-            </IconButton>
-          )}
-
-          {/* New ToDo Button */}
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleCreateTodo}
+        <Stack direction="row" spacing={1} alignItems="center">
+          {/* Filter Toggle - Available on All Views */}
+          <IconButton
+            onClick={() => setFiltersExpanded(!filtersExpanded)}
+            aria-label="Toggle filters"
+            size="small"
           >
-            New
-          </Button>
+            <FilterIcon />
+          </IconButton>
+
+          {/* Spacer to push New button to the right */}
+          <Box flex={1} />
+
+          {/* New ToDo Dropdown Button */}
+          <ButtonGroup variant="contained">
+            <Button
+              startIcon={<AddIcon />}
+              onClick={handleCreateTodo}
+            >
+              New
+            </Button>
+            <Button
+              size="small"
+              onClick={handleNewMenuClick}
+              aria-label="New options"
+              sx={{ px: 1 }}
+            >
+              <ArrowDropDownIcon />
+            </Button>
+          </ButtonGroup>
+
+          {/* New Menu */}
+          <Menu
+            anchorEl={newMenuAnchor}
+            open={Boolean(newMenuAnchor)}
+            onClose={handleNewMenuClose}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'left',
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'left',
+            }}
+          >
+            <MenuItem onClick={handleCreateTodo}>
+              <AddIcon sx={{ mr: 1 }} />
+              Todo
+            </MenuItem>
+            <MenuItem onClick={handleOpenAIDialog}>
+              <MagicIcon sx={{ mr: 1 }} />
+              Ask AI
+            </MenuItem>
+          </Menu>
         </Stack>
       </Box>
 
-      {/* Filters Section - Always visible on desktop, collapsible on mobile */}
-      <Collapse in={!isMobile || filtersExpanded}>
+      {/* Filters Section - Collapsible on All Views */}
+      <Collapse in={filtersExpanded}>
         {/* Quick Filters Row */}
         <Box display="flex" flexDirection={{ xs: "column", sm: "row" }} gap={2} alignItems={{ sm: "center" }} mb={2}>
           <Stack direction="row" spacing={1} flexWrap="wrap">
@@ -242,6 +242,97 @@ export function ToDoToolbar(props: ToDoToolbarProps) {
           </Stack>
         </Box>
 
+        {/* Assignee Avatars Row */}
+        <Box mb={2}>
+          <AssigneeAvatars
+            todos={todos || []}
+            selectedAssignee={assigneeFilter}
+            onAssigneeSelect={(assignee) => onAssigneeFilterChange?.(assignee || "")}
+          />
+        </Box>
+
+        {/* Status Filter Badges */}
+        <Box mb={2}>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: "block" }}>
+            Status
+          </Typography>
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            <Chip
+              label="All"
+              variant={!statusFilter ? "filled" : "outlined"}
+              color={!statusFilter ? "primary" : "default"}
+              onClick={() => onStatusFilterChange?.("")}
+              clickable
+              size="small"
+            />
+            <Chip
+              label="Open"
+              variant={statusFilter === "Open" ? "filled" : "outlined"}
+              color={statusFilter === "Open" ? "success" : "default"}
+              onClick={() => onStatusFilterChange?.(statusFilter === "Open" ? "" : "Open")}
+              clickable
+              size="small"
+            />
+            <Chip
+              label="In Progress"
+              variant={statusFilter === "In Progress" ? "filled" : "outlined"}
+              color={statusFilter === "In Progress" ? "info" : "default"}
+              onClick={() => onStatusFilterChange?.(statusFilter === "In Progress" ? "" : "In Progress")}
+              clickable
+              size="small"
+            />
+            <Chip
+              label="Closed"
+              variant={statusFilter === "Closed" ? "filled" : "outlined"}
+              color={statusFilter === "Closed" ? "secondary" : "default"}
+              onClick={() => onStatusFilterChange?.(statusFilter === "Closed" ? "" : "Closed")}
+              clickable
+              size="small"
+            />
+          </Stack>
+        </Box>
+
+        {/* Priority Filter Badges */}
+        <Box mb={2}>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: "block" }}>
+            Priority
+          </Typography>
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            <Chip
+              label="All"
+              variant={!priorityFilter ? "filled" : "outlined"}
+              color={!priorityFilter ? "primary" : "default"}
+              onClick={() => onPriorityFilterChange?.("")}
+              clickable
+              size="small"
+            />
+            <Chip
+              label="High"
+              variant={priorityFilter === "High" ? "filled" : "outlined"}
+              color={priorityFilter === "High" ? "error" : "default"}
+              onClick={() => onPriorityFilterChange?.(priorityFilter === "High" ? "" : "High")}
+              clickable
+              size="small"
+            />
+            <Chip
+              label="Medium"
+              variant={priorityFilter === "Medium" ? "filled" : "outlined"}
+              color={priorityFilter === "Medium" ? "warning" : "default"}
+              onClick={() => onPriorityFilterChange?.(priorityFilter === "Medium" ? "" : "Medium")}
+              clickable
+              size="small"
+            />
+            <Chip
+              label="Low"
+              variant={priorityFilter === "Low" ? "filled" : "outlined"}
+              color={priorityFilter === "Low" ? "info" : "default"}
+              onClick={() => onPriorityFilterChange?.(priorityFilter === "Low" ? "" : "Low")}
+              clickable
+              size="small"
+            />
+          </Stack>
+        </Box>
+
         {/* Search and Filters Row */}
         <Box display="flex" flexDirection={{ xs: "column", sm: "row" }} gap={2} alignItems={{ sm: "center" }}>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap" flex={1}>
@@ -255,37 +346,7 @@ export function ToDoToolbar(props: ToDoToolbarProps) {
           sx={{ minWidth: 200 }}
         />
 
-        {/* Status Filter */}
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel>Status</InputLabel>
-          <Select
-            value={statusFilter}
-            label="Status"
-            onChange={(e) => onStatusFilterChange?.(e.target.value)}
-          >
-            <MenuItem value="">All</MenuItem>
-            <MenuItem value="Open">Open</MenuItem>
-            <MenuItem value="In Progress">In Progress</MenuItem>
-            <MenuItem value="Blocked">Blocked</MenuItem>
-            <MenuItem value="Closed">Closed</MenuItem>
-            <MenuItem value="Cancelled">Cancelled</MenuItem>
-          </Select>
-        </FormControl>
 
-        {/* Priority Filter */}
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel>Priority</InputLabel>
-          <Select
-            value={priorityFilter}
-            label="Priority"
-            onChange={(e) => onPriorityFilterChange?.(e.target.value)}
-          >
-            <MenuItem value="">All</MenuItem>
-            <MenuItem value="High">High</MenuItem>
-            <MenuItem value="Medium">Medium</MenuItem>
-            <MenuItem value="Low">Low</MenuItem>
-          </Select>
-        </FormControl>
 
         {/* Group By */}
         <FormControl size="small" sx={{ minWidth: 120 }}>

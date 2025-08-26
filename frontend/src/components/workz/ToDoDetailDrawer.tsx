@@ -31,6 +31,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import LaunchIcon from "@mui/icons-material/Launch";
 import { ToDoActivity } from "./ToDoActivity";
+import { SubtasksList } from "./SubtasksList";
 import type { Todo } from "../../hooks/useTodos";
 import { useFrappeUpdateDoc, useFrappeDeleteDoc } from "frappe-react-sdk";
 import { useReferenceDocuments } from "../../hooks/useReferenceDocuments";
@@ -380,6 +381,9 @@ export function ToDoDetailDrawer(props: ToDoDetailDrawerProps) {
               </MenuItem>
             ))}
           </TextField>
+
+          {/* Subtasks Section */}
+          {todoId && <SubtasksList parentTodoId={todoId} />}
 
           <Divider />
 

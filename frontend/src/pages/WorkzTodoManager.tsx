@@ -11,12 +11,13 @@ import { ToDoTable } from "../components/workz/ToDoTable";
 import { ToDoListMobile } from "../components/workz/ToDoListMobile";
 import { ToDoDetailDrawer } from "../components/workz/ToDoDetailDrawer";
 import { ProjectMenu } from "../components/workz/ProjectMenu";
-import { AssigneeAvatars } from "../components/workz/AssigneeAvatars";
+
+import { AITodoDialog } from "../components/workz/AITodoDialog";
 import { useMobileView } from "../hooks/useMobileView";
 import { useTodos, Todo } from "../hooks/useTodos";
 import { useTodoTableState } from "../hooks/useTodoTableState";
 import { useThemeContext } from "../contexts/ThemeContext";
-import { useFrappeCreateDoc } from "frappe-react-sdk";
+import { useFrappeCreateDoc, useFrappeAuth } from "frappe-react-sdk";
 
 export function WorkzTodoManager() {
   const { useCards } = useMobileView();
@@ -24,6 +25,9 @@ export function WorkzTodoManager() {
 
   // Data hook (real data or error per configuration)
   const todosQuery = useTodos();
+
+  // Auth hook for current user
+  const { currentUser } = useFrappeAuth();
 
   // Quick create hook
   const { createDoc: createTodo } = useFrappeCreateDoc();
@@ -35,6 +39,9 @@ export function WorkzTodoManager() {
   // Reference menu state
   const [projectMenuOpen, setProjectMenuOpen] = React.useState(false);
   const [selectedReference, setSelectedReference] = React.useState<string | null>(null);
+
+  // AI dialog state
+  const [aiDialogOpen, setAiDialogOpen] = React.useState(false);
 
   // Table state (filtering, sorting, grouping) - must come after selectedReference declaration
   const tableState = useTodoTableState(todosQuery.todos || [], selectedReference);
@@ -73,19 +80,29 @@ export function WorkzTodoManager() {
     return reference;
   };
 
-  // Quick create handler
-  const handleQuickCreate = async (subject: string) => {
-    try {
-      await createTodo("ToDo", {
-        description: subject,
-        status: "Open",
-        priority: "Medium"
-      });
-      // Refresh the todo list
-      todosQuery.refetch();
-    } catch (error) {
-      console.error("Failed to create todo:", error);
-      // TODO: Show error toast/snackbar
+  // AI dialog handlers
+  const handleOpenAIDialog = () => {
+    setAiDialogOpen(true);
+  };
+
+  const handleCloseAIDialog = () => {
+    setAiDialogOpen(false);
+  };
+
+  const handleAISuccess = () => {
+    // Refresh the todo list when AI creates a todo
+    todosQuery.refetch();
+  };
+
+  // Sort change handler
+  const handleSortChange = (field: string) => {
+    if (tableState.sortBy === field) {
+      // Toggle sort order if same field
+      tableState.setSortOrder(tableState.sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      // Set new field and default to ascending
+      tableState.setSortBy(field);
+      tableState.setSortOrder("asc");
     }
   };
 
@@ -157,14 +174,7 @@ export function WorkzTodoManager() {
         menuOpen={projectMenuOpen}
         activeFilter={getActiveFilterDisplay(selectedReference)}
         onClearFilter={handleClearFilter}
-        onQuickCreate={handleQuickCreate}
-      />
-
-      {/* Assignee Quick Filter (Desktop only) */}
-      <AssigneeAvatars
-        todos={tableState.filteredTodosForAvatars}
-        selectedAssignee={tableState.assigneeFilter}
-        onAssigneeSelect={(assignee) => tableState.setAssigneeFilter(assignee || "")}
+        onOpenAIDialog={handleOpenAIDialog}
       />
 
       {useCards ? (
@@ -176,6 +186,9 @@ export function WorkzTodoManager() {
         <ToDoTable
           onOpen={handleOpen}
           groupedTodos={tableState.groupedTodos}
+          sortBy={tableState.sortBy}
+          sortOrder={tableState.sortOrder}
+          onSortChange={handleSortChange}
         />
       )}
       {/* Drawer rendered once at page root to preserve state */}
@@ -186,7 +199,27 @@ export function WorkzTodoManager() {
         todo={selectedTodo}
         onRefresh={todosQuery.refetch}
       />
-        {/* Context menu and dialogs will be added in later slices */}
+
+      {/* Project/Reference Menu */}
+      <ProjectMenu
+        open={projectMenuOpen}
+        onToggle={() => setProjectMenuOpen(!projectMenuOpen)}
+        todos={todosQuery.todos || []}
+        selectedProject={selectedReference}
+        onProjectSelect={setSelectedReference}
+        isDarkMode={isDarkMode}
+        onThemeToggle={handleThemeToggle}
+      />
+
+      {/* AI Todo Dialog */}
+      <AITodoDialog
+        open={aiDialogOpen}
+        onClose={handleCloseAIDialog}
+        onSuccess={handleAISuccess}
+        currentUser={currentUser || undefined}
+        selectedReference={selectedReference}
+        activeFilter={getActiveFilterDisplay(selectedReference)}
+      />
       </Box>
     </Box>
   );

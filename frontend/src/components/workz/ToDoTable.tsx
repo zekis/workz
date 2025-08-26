@@ -13,6 +13,7 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  TableSortLabel,
   Typography,
   Box,
   Chip,
@@ -55,10 +56,13 @@ function getPriorityColor(priority: string | null | undefined): "default" | "pri
 export interface ToDoTableProps {
   onOpen?: (id: string) => void;
   groupedTodos?: import("../../hooks/useTodoTableState").TodoGroup[];
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  onSortChange?: (field: string) => void;
 }
 
 export function ToDoTable(props: ToDoTableProps) {
-  const { onOpen, groupedTodos } = props;
+  const { onOpen, groupedTodos, sortBy, sortOrder, onSortChange } = props;
   const { isLoading, error, refetch } = useTodos();
   const contextMenu = useContextMenu();
   const { updateDoc } = useFrappeUpdateDoc();
@@ -80,6 +84,10 @@ export function ToDoTable(props: ToDoTableProps) {
     } catch (error) {
       console.error("Failed to update todo status:", error);
     }
+  };
+
+  const handleSort = (field: string) => {
+    onSortChange?.(field);
   };
 
   const toggleGroupCollapse = (groupKey: string) => {
@@ -140,10 +148,42 @@ export function ToDoTable(props: ToDoTableProps) {
               }
             }}
           >
-            <TableCell sx={{ width: { xs: "40%", md: "50%" } }}>Subject</TableCell>
-            <TableCell>Status</TableCell>
-            <TableCell>Priority</TableCell>
-            <TableCell>Assignee</TableCell>
+            <TableCell sx={{ width: { xs: "40%", md: "50%" } }}>
+              <TableSortLabel
+                active={sortBy === "subject"}
+                direction={sortBy === "subject" ? sortOrder : "asc"}
+                onClick={() => handleSort("subject")}
+              >
+                Subject
+              </TableSortLabel>
+            </TableCell>
+            <TableCell>
+              <TableSortLabel
+                active={sortBy === "status"}
+                direction={sortBy === "status" ? sortOrder : "asc"}
+                onClick={() => handleSort("status")}
+              >
+                Status
+              </TableSortLabel>
+            </TableCell>
+            <TableCell>
+              <TableSortLabel
+                active={sortBy === "priority"}
+                direction={sortBy === "priority" ? sortOrder : "asc"}
+                onClick={() => handleSort("priority")}
+              >
+                Priority
+              </TableSortLabel>
+            </TableCell>
+            <TableCell>
+              <TableSortLabel
+                active={sortBy === "assignee"}
+                direction={sortBy === "assignee" ? sortOrder : "asc"}
+                onClick={() => handleSort("assignee")}
+              >
+                Assignee
+              </TableSortLabel>
+            </TableCell>
             <TableCell sx={{ width: 60 }}>Complete</TableCell>
           </TableRow>
         </TableHead>

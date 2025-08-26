@@ -65,6 +65,10 @@ export function useTodos() {
     fields: fields as unknown as (
       ("*" | keyof FrappeToDo | "owner" | "modified_by" | "idx" | "docstatus" | "parent" | "parentfield" | "parenttype")[]
     ),
+    filters: [
+      // Exclude subtasks (todos that reference other todos)
+      ["reference_type", "!=", "ToDo"]
+    ],
     limit: 100,
     orderBy: { field: "modified", order: "desc" }
   });
