@@ -19,6 +19,11 @@ workz/www/workz/index.html
 frontend/dist/
 frontend/build/
 
+# Public frontend build artifacts - exclude index files
+workz/public/frontend/index-*.js
+workz/public/frontend/index-*.css
+workz/public/frontend/index.html
+
 # Environment files
 .env
 .env.local

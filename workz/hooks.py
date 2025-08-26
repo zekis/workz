@@ -11,15 +11,14 @@ app_license = "mit"
 # required_apps = []
 
 # Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "workz",
-# 		"logo": "/assets/workz/logo.png",
-# 		"title": "Workz",
-# 		"route": "/workz",
-# 		"has_permission": "workz.api.permission.has_app_permission"
-# 	}
-# ]
+add_to_apps_screen = [
+	{
+		"name": "workz",
+		"logo": "/assets/workz/todo.png",
+		"title": "Workz",
+		"route": "/workz"
+	}
+]
 
 # Includes in <head>
 # ------------------
