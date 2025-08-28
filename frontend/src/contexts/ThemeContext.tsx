@@ -34,6 +34,18 @@ export const ThemeContextProvider: React.FC<ThemeContextProviderProps> = ({ chil
   const theme = createTheme({
     palette: {
       mode: isDarkMode ? 'dark' : 'light',
+      primary: {
+        main: '#3fd921',
+        light: '#6eff4f',
+        dark: '#2ba615',
+        contrastText: '#ffffff',
+      },
+      success: {
+        main: '#3fd921',
+        light: '#6eff4f',
+        dark: '#2ba615',
+        contrastText: '#ffffff',
+      },
     },
     components: {
       // Override MUI Container to remove max-width constraint

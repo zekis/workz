@@ -57,7 +57,7 @@ function getReferenceIcon(referenceType: string | null | undefined) {
   switch (referenceType?.toLowerCase()) {
     case "project": return <ProjectIcon fontSize="small" color="primary" />;
     case "activity": return <ActivityIcon fontSize="small" color="secondary" />;
-    case "communication": return <CommunicationIcon fontSize="small" color="info" />;
+    case "communication": return <CommunicationIcon fontSize="small" color="success" />;
     case "task": return <TaskIcon fontSize="small" color="warning" />;
     case "issue": return <IssueIcon fontSize="small" color="error" />;
     case "":

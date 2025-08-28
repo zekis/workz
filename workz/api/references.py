@@ -12,41 +12,80 @@ from frappe import _
 def resolve_references(references):
     """
     Resolve a list of references to their display titles.
-    
+    Only resolves references from todos that the current user created or is assigned to.
+
     Args:
         references: List of dicts with 'doctype' and 'name' keys
                    Example: [{"doctype": "Project", "name": "PROJ-001"}, ...]
-    
+
     Returns:
         Dict mapping "doctype:name" to display title
         Example: {"Project:PROJ-001": "Alpha Project", ...}
     """
     if not references:
         return {}
-    
+
     # Parse references if it's a JSON string
     if isinstance(references, str):
         import json
         references = json.loads(references)
-    
+
     if not isinstance(references, list):
         frappe.throw(_("References must be a list"), frappe.ValidationError)
-    
+
     resolved = {}
-    
+    current_user = frappe.session.user
+
+    # First, verify that these references come from todos the user can access
+    # Get all todos the user created or is assigned to using the same approach as get_user_todos
+
+    # Get todos where user is owner
+    owned_todos = frappe.get_all(
+        "ToDo",
+        filters={
+            "reference_type": ["!=", "ToDo"],
+            "owner": current_user
+        },
+        fields=["reference_type", "reference_name"]
+    )
+
+    # Get todos where user is assigned
+    assigned_todos = frappe.get_all(
+        "ToDo",
+        filters={
+            "reference_type": ["!=", "ToDo"],
+            "allocated_to": current_user
+        },
+        fields=["reference_type", "reference_name"]
+    )
+
+    # Combine the results
+    user_todos = owned_todos + assigned_todos
+
+    # Create a set of valid references for this user
+    valid_references = set()
+    for todo in user_todos:
+        if todo.reference_type and todo.reference_name:
+            valid_references.add(f"{todo.reference_type}:{todo.reference_name}")
+
     # Group references by doctype for efficient processing
     by_doctype = {}
     for ref in references:
         if not isinstance(ref, dict) or 'doctype' not in ref or 'name' not in ref:
             continue
-            
+
         doctype = ref['doctype']
         name = ref['name']
-        
+        ref_key = f"{doctype}:{name}"
+
+        # Only process references that come from user's todos
+        if ref_key not in valid_references:
+            continue
+
         # Check if user has read permission for this doctype
         if not frappe.has_permission(doctype, "read"):
             continue
-            
+
         if doctype not in by_doctype:
             by_doctype[doctype] = []
         by_doctype[doctype].append(name)
@@ -161,3 +200,112 @@ def resolve_single_reference(doctype, name):
     except Exception as e:
         frappe.log_error(f"Failed to resolve {doctype}:{name}: {str(e)}")
         return name
+
+
+@frappe.whitelist(allow_guest=False)
+def get_user_todos():
+    """
+    Get todos that the current user created or is assigned to.
+
+    Returns:
+        List of todo documents with all required fields
+    """
+    current_user = frappe.session.user
+
+    # Get todos where user is owner or assigned
+    # Use two separate queries and combine them (simpler approach)
+    fields = [
+        "name", "description", "reference_name", "reference_type",
+        "allocated_to", "priority", "status", "creation", "modified", "owner", "date"
+    ]
+
+    # Get todos where user is owner
+    owned_todos = frappe.db.get_list(
+        "ToDo",
+        fields=fields,
+        filters={
+            "reference_type": ["!=", "ToDo"],
+            "owner": current_user
+        },
+        order_by="modified desc",
+        limit=50  # Split the limit between owned and assigned
+    )
+
+    # Get todos where user is assigned
+    assigned_todos = frappe.db.get_list(
+        "ToDo",
+        fields=fields,
+        filters={
+            "reference_type": ["!=", "ToDo"],
+            "allocated_to": current_user
+        },
+        order_by="modified desc",
+        limit=50
+    )
+
+    # Combine and deduplicate
+    todo_dict = {}
+    for todo in owned_todos + assigned_todos:
+        todo_dict[todo.name] = todo
+
+    # Convert back to list and sort by modified date
+    todos = list(todo_dict.values())
+    todos.sort(key=lambda x: x.get('modified', ''), reverse=True)
+
+    # Limit to 100 total
+    todos = todos[:100]
+
+    return todos
+
+
+@frappe.whitelist(allow_guest=False)
+def get_user_todos_alternative():
+    """
+    Alternative implementation using Frappe's query builder.
+    Get todos that the current user created or is assigned to.
+    """
+    current_user = frappe.session.user
+
+    # Use Frappe's query builder for more complex queries
+    from frappe.query_builder import DocType
+
+    todo = DocType("ToDo")
+
+    query = (
+        frappe.qb.from_(todo)
+        .select(
+            todo.name,
+            todo.description,
+            todo.reference_name,
+            todo.reference_type,
+            todo.allocated_to,
+            todo.priority,
+            todo.status,
+            todo.creation,
+            todo.modified,
+            todo.owner,
+            todo.date
+        )
+        .where(
+            (todo.reference_type != "ToDo") &
+            ((todo.owner == current_user) | (todo.allocated_to == current_user))
+        )
+        .orderby(todo.modified, order=frappe.qb.desc)
+        .limit(100)
+    )
+
+    try:
+        result = query.run(as_dict=True)
+        return result
+    except Exception as e:
+        frappe.log_error(f"Query builder failed: {str(e)}")
+        # Fallback to simple SQL
+        return frappe.db.sql("""
+            SELECT name, description, reference_name, reference_type, allocated_to,
+                   priority, status, creation, modified, owner, date
+            FROM `tabToDo`
+            WHERE reference_type != 'ToDo'
+            AND (owner = %(user)s OR allocated_to = %(user)s)
+            ORDER BY modified DESC
+            LIMIT 100
+        """, {"user": current_user}, as_dict=True)

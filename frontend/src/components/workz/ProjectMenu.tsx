@@ -264,12 +264,12 @@ export function ProjectMenu(props: ProjectMenuProps) {
                       borderRadius: 1,
                       "&.Mui-selected": {
                         bgcolor: (theme) => theme.palette.mode === 'dark'
-                          ? 'primary.dark'
-                          : 'primary.light',
+                          ? 'success.dark'
+                          : 'success.light',
                         "&:hover": {
                           bgcolor: (theme) => theme.palette.mode === 'dark'
-                            ? 'primary.dark'
-                            : 'primary.light',
+                            ? 'success.dark'
+                            : 'success.light',
                         }
                       }
                     }}
@@ -286,7 +286,7 @@ export function ProjectMenu(props: ProjectMenuProps) {
                     />
                     <Badge
                       badgeContent={reference.openCount}
-                      color="primary"
+                      color="success"
                       sx={{
                         "& .MuiBadge-badge": {
                           fontSize: "0.75rem",
@@ -335,19 +335,19 @@ export function ProjectMenu(props: ProjectMenuProps) {
                                 borderRadius: 1,
                                 "&.Mui-selected": {
                                   bgcolor: (theme) => theme.palette.mode === 'dark'
-                                    ? 'primary.dark'
-                                    : 'primary.light',
+                                    ? 'success.dark'
+                                    : 'success.light',
                                   "&:hover": {
                                     bgcolor: (theme) => theme.palette.mode === 'dark'
-                                      ? 'primary.dark'
-                                      : 'primary.light',
+                                      ? 'success.dark'
+                                      : 'success.light',
                                   }
                                 }
                               }}
                             >
                               <ListItemIcon sx={{ minWidth: 40 }}>
                                 {isProjectSelected ? (
-                                  <FolderOpenIcon color="primary" fontSize="small" />
+                                  <FolderOpenIcon color="success" fontSize="small" />
                                 ) : (
                                   <FolderIcon fontSize="small" />
                                 )}
@@ -361,7 +361,7 @@ export function ProjectMenu(props: ProjectMenuProps) {
                               />
                               <Badge
                                 badgeContent={projectInfo.openCount}
-                                color="primary"
+                                color="success"
                                 sx={{
                                   "& .MuiBadge-badge": {
                                     fontSize: "0.75rem",
@@ -383,27 +383,6 @@ export function ProjectMenu(props: ProjectMenuProps) {
 
 
         </List>
-
-        {/* Theme Toggle at Bottom */}
-        <Box sx={{ mt: 'auto', p: 2, borderTop: 1, borderColor: 'divider' }}>
-          <ListItem disablePadding>
-            <ListItemButton
-              onClick={onThemeToggle}
-              sx={{
-                borderRadius: 1,
-                "&:hover": { bgcolor: "action.hover" }
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: 36 }}>
-                {isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
-              </ListItemIcon>
-              <ListItemText
-                primary={isDarkMode ? "Light Mode" : "Dark Mode"}
-                primaryTypographyProps={{ fontSize: "0.875rem" }}
-              />
-            </ListItemButton>
-          </ListItem>
-        </Box>
       </Box>
     </Box>
   );

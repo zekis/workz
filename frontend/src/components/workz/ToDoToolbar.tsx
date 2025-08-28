@@ -143,7 +143,7 @@ export function ToDoToolbar(props: ToDoToolbarProps) {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" component="div">
-            Workz ToDos
+            Task Manager
           </Typography>
           {activeFilter && (
             <Chip

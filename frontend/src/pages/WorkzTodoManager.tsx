@@ -173,7 +173,7 @@ export function WorkzTodoManager() {
         quickFilter={tableState.quickFilter}
         onQuickFilterChange={tableState.setQuickFilter}
         currentReference={selectedReference}
-        todos={todosQuery.todos || []}
+        todos={tableState.filteredTodosForAvatars}
         onRefresh={todosQuery.refetch}
         onMenuToggle={() => setProjectMenuOpen(!projectMenuOpen)}
         menuOpen={projectMenuOpen}

@@ -66,7 +66,7 @@ function getReferenceIcon(referenceType: string | null | undefined) {
   switch (referenceType?.toLowerCase()) {
     case "project": return <ProjectIcon fontSize="small" color="primary" />;
     case "activity": return <ActivityIcon fontSize="small" color="secondary" />;
-    case "communication": return <CommunicationIcon fontSize="small" color="info" />;
+    case "communication": return <CommunicationIcon fontSize="small" color="success" />;
     case "task": return <TaskIcon fontSize="small" color="warning" />;
     case "issue": return <IssueIcon fontSize="small" color="error" />;
     case "":
@@ -180,6 +180,7 @@ export function ToDoTable(props: ToDoTableProps) {
               }
             }}
           >
+            <TableCell sx={{ width: 60 }}></TableCell>
             <TableCell sx={{ width: { xs: "40%", md: "50%" } }}>
               <TableSortLabel
                 active={sortBy === "subject"}
@@ -225,7 +226,6 @@ export function ToDoTable(props: ToDoTableProps) {
                 Due Date
               </TableSortLabel>
             </TableCell>
-            <TableCell sx={{ width: 60 }}>Complete</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -273,6 +273,21 @@ export function ToDoTable(props: ToDoTableProps) {
                     onContextMenu={(e) => contextMenu.handleContextMenu(e, r)}
                     sx={{ cursor: "pointer" }}
                   >
+                    <TableCell sx={{ width: 60 }} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                      <Tooltip title={r.status === "Closed" ? "Mark as incomplete" : "Mark as complete"}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleToggleComplete(r)}
+                          color={r.status === "Closed" ? "success" : "default"}
+                        >
+                          {r.status === "Closed" ? (
+                            <CheckCircleIcon />
+                          ) : (
+                            <RadioButtonUncheckedIcon />
+                          )}
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
                     <TableCell>
                       <Box display="flex" alignItems="flex-start" gap={1}>
                         {/* Reference Type Icon */}
@@ -331,21 +346,6 @@ export function ToDoTable(props: ToDoTableProps) {
                       <Typography variant="body2" noWrap>
                         {r.dueDate ? new Date(r.dueDate).toLocaleDateString() : "No due date"}
                       </Typography>
-                    </TableCell>
-                    <TableCell sx={{ width: 60 }} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                      <Tooltip title={r.status === "Closed" ? "Mark as incomplete" : "Mark as complete"}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleToggleComplete(r)}
-                          color={r.status === "Closed" ? "success" : "default"}
-                        >
-                          {r.status === "Closed" ? (
-                            <CheckCircleIcon />
-                          ) : (
-                            <RadioButtonUncheckedIcon />
-                          )}
-                        </IconButton>
-                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 );

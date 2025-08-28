@@ -7,7 +7,7 @@
  * - Direct ESM import ensures the hook is bundled and executed in production.
  */
 import { useMemo } from "react";
-import { useFrappeGetDocList } from "frappe-react-sdk";
+import { useFrappeGetCall } from "frappe-react-sdk";
 
 export interface FrappeToDo {
   name: string;
@@ -54,37 +54,33 @@ function mapFrappeToTodo(row: FrappeToDo): Todo {
 }
 
 export function useTodos() {
-  const fields = [
-    "name",
-    "description",
-    "reference_name",
-    "reference_type",
-    "allocated_to",
-    "priority",
-    "status",
-    "creation",
-    "modified",
-    "owner",
-    "date"
-  ];
+  // Use our custom API endpoint for server-side filtering
+  const { data, error, isLoading, mutate } = useFrappeGetCall<FrappeToDo[]>("workz.api.get_user_todos");
 
-  // Cast fields to the SDK's expected Field list type to satisfy TS
-  const { data, error, isLoading, mutate } = useFrappeGetDocList<FrappeToDo>("ToDo", {
-    fields: fields as unknown as (
-      ("*" | keyof FrappeToDo | "owner" | "modified_by" | "idx" | "docstatus" | "parent" | "parentfield" | "parenttype")[]
-    ),
-    filters: [
-      // Exclude subtasks (todos that reference other todos)
-      ["reference_type", "!=", "ToDo"]
-    ],
-    limit: 100,
-    orderBy: { field: "modified", order: "desc" }
-  });
+  const todos = useMemo<Todo[]>(() => {
+    // Handle the API response properly
+    let todoData: FrappeToDo[] = [];
 
-  const todos = useMemo<Todo[]>(
-    () => (data || []).map(mapFrappeToTodo),
-    [data]
-  );
+    if (Array.isArray(data)) {
+      todoData = data;
+    } else if (data && typeof data === 'object') {
+      // Handle case where API returns {message: [...]} or similar structure
+      const possibleArrays = [
+        (data as any).message,
+        (data as any).data,
+        (data as any).result
+      ];
+
+      for (const arr of possibleArrays) {
+        if (Array.isArray(arr)) {
+          todoData = arr;
+          break;
+        }
+      }
+    }
+
+    return todoData.map(mapFrappeToTodo);
+  }, [data]);
 
   return {
     todos,
