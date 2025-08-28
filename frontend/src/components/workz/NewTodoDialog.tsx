@@ -43,6 +43,7 @@ export function NewTodoDialog(props: NewTodoDialogProps) {
   const [referenceType, setReferenceType] = React.useState("");
   const [referenceName, setReferenceName] = React.useState("");
   const [assignee, setAssignee] = React.useState("");
+  const [dueDate, setDueDate] = React.useState("");
 
   // Fetch available reference documents based on selected type
   const { documents: referenceDocuments, isLoading: isLoadingDocs } = useReferenceDocuments(referenceType);
@@ -81,6 +82,7 @@ export function NewTodoDialog(props: NewTodoDialogProps) {
     setReferenceType("");
     setReferenceName("");
     setAssignee("");
+    setDueDate("");
     onClose();
   };
 
@@ -92,7 +94,8 @@ export function NewTodoDialog(props: NewTodoDialogProps) {
         description: subject.trim(),
         priority,
         status,
-        allocated_to: assignee.trim() || null
+        allocated_to: assignee.trim() || null,
+        date: dueDate || null
       };
 
       // Add reference fields if specified
@@ -236,6 +239,20 @@ export function NewTodoDialog(props: NewTodoDialogProps) {
               </MenuItem>
             ))}
           </TextField>
+
+          {/* Due Date */}
+          <TextField
+            fullWidth
+            label="Due Date"
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            size="small"
+            helperText="Optional: Set a due date for this todo"
+            InputLabelProps={{
+              shrink: true,
+            }}
+          />
         </Stack>
       </DialogContent>
 

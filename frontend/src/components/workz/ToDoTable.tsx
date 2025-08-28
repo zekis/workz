@@ -216,6 +216,15 @@ export function ToDoTable(props: ToDoTableProps) {
                 Assignee
               </TableSortLabel>
             </TableCell>
+            <TableCell>
+              <TableSortLabel
+                active={sortBy === "dueDate"}
+                direction={sortBy === "dueDate" ? sortOrder : "asc"}
+                onClick={() => handleSort("dueDate")}
+              >
+                Due Date
+              </TableSortLabel>
+            </TableCell>
             <TableCell sx={{ width: 60 }}>Complete</TableCell>
           </TableRow>
         </TableHead>
@@ -226,7 +235,7 @@ export function ToDoTable(props: ToDoTableProps) {
               {groupedTodos.length > 1 && (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     sx={{
                       bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100',
                       color: (theme) => theme.palette.mode === 'dark' ? 'grey.100' : 'grey.800',
@@ -293,6 +302,8 @@ export function ToDoTable(props: ToDoTableProps) {
 
                           <Typography variant="caption" color="text.secondary">
                             {r.updatedAt ? new Date(r.updatedAt).toLocaleDateString() : ""}
+                            {r.updatedAt && r.owner && " • "}
+                            {r.owner && `Created by ${r.owner}`}
                           </Typography>
                         </Box>
                       </Box>
@@ -315,6 +326,11 @@ export function ToDoTable(props: ToDoTableProps) {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" noWrap>{r.assignee || "Unassigned"}</Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" noWrap>
+                        {r.dueDate ? new Date(r.dueDate).toLocaleDateString() : "No due date"}
+                      </Typography>
                     </TableCell>
                     <TableCell sx={{ width: 60 }} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
                       <Tooltip title={r.status === "Closed" ? "Mark as incomplete" : "Mark as complete"}>

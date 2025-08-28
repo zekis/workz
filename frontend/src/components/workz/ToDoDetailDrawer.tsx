@@ -59,6 +59,7 @@ export function ToDoDetailDrawer(props: ToDoDetailDrawerProps) {
   const [assignee, setAssignee] = React.useState("");
   const [referenceType, setReferenceType] = React.useState("");
   const [referenceName, setReferenceName] = React.useState("");
+  const [dueDate, setDueDate] = React.useState("");
 
   const { updateDoc, loading: isSaving } = useFrappeUpdateDoc();
   const { deleteDoc, loading: isDeleting } = useFrappeDeleteDoc();
@@ -96,6 +97,7 @@ export function ToDoDetailDrawer(props: ToDoDetailDrawerProps) {
       setAssignee(todo.assignee || "");
       setReferenceType(todo.referenceType || "");
       setReferenceName(todo.referenceName || "");
+      setDueDate(todo.dueDate || "");
     } else {
       setSubject("");
       setStatus("Open");
@@ -103,6 +105,7 @@ export function ToDoDetailDrawer(props: ToDoDetailDrawerProps) {
       setAssignee("");
       setReferenceType("");
       setReferenceName("");
+      setDueDate("");
     }
   }, [todo]);
 
@@ -128,6 +131,7 @@ export function ToDoDetailDrawer(props: ToDoDetailDrawerProps) {
       allocated_to: assignee || null,
       reference_type: referenceType || null,
       reference_name: referenceName || null,
+      date: dueDate || null,
     };
 
     try {
@@ -140,7 +144,7 @@ export function ToDoDetailDrawer(props: ToDoDetailDrawerProps) {
         message: err?.message || "Failed to update ToDo.",
       });
     }
-  }, [todoId, subject, status, priority, assignee, referenceType, referenceName, updateDoc]);
+  }, [todoId, subject, status, priority, assignee, referenceType, referenceName, dueDate, updateDoc]);
 
   // Clear reference name when reference type changes
   const handleReferenceTypeChange = (newType: string) => {
@@ -390,6 +394,22 @@ export function ToDoDetailDrawer(props: ToDoDetailDrawerProps) {
               </MenuItem>
             ))}
           </TextField>
+
+          {/* Due Date */}
+          <TextField
+            fullWidth
+            label="Due Date"
+            type="date"
+            value={dueDate}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setDueDate(e.target.value)
+            }
+            size="small"
+            helperText="Optional: Set a due date for this todo"
+            InputLabelProps={{
+              shrink: true,
+            }}
+          />
 
           {/* Subtasks Section */}
           {todoId && <SubtasksList parentTodoId={todoId} />}

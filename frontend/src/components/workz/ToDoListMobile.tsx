@@ -159,6 +159,14 @@ export function ToDoListMobile(props: ToDoListMobileProps) {
 
                   <Typography variant="caption" color="text.secondary">
                     {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : ""}
+                    {item.updatedAt && item.owner && " • "}
+                    {item.owner && `Created by ${item.owner}`}
+                    {item.dueDate && (
+                      <>
+                        {(item.updatedAt || item.owner) && " • "}
+                        Due: {new Date(item.dueDate).toLocaleDateString()}
+                      </>
+                    )}
                   </Typography>
                 </Box>
                 <IconButton

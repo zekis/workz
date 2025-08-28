@@ -19,6 +19,8 @@ export interface FrappeToDo {
   status?: string | null;
   creation?: string | null;
   modified?: string | null;
+  owner?: string | null;
+  date?: string | null;
 }
 
 export interface Todo {
@@ -31,6 +33,8 @@ export interface Todo {
   status?: string | null;
   updatedAt?: string | null;
   createdAt?: string | null;
+  owner?: string | null;
+  dueDate?: string | null;
 }
 
 function mapFrappeToTodo(row: FrappeToDo): Todo {
@@ -43,7 +47,9 @@ function mapFrappeToTodo(row: FrappeToDo): Todo {
     priority: row.priority ?? null,
     status: row.status ?? null,
     createdAt: row.creation ?? null,
-    updatedAt: row.modified ?? null
+    updatedAt: row.modified ?? null,
+    owner: row.owner ?? null,
+    dueDate: row.date ?? null
   };
 }
 
@@ -57,7 +63,9 @@ export function useTodos() {
     "priority",
     "status",
     "creation",
-    "modified"
+    "modified",
+    "owner",
+    "date"
   ];
 
   // Cast fields to the SDK's expected Field list type to satisfy TS

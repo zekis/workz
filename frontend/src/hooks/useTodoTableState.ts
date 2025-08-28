@@ -150,6 +150,10 @@ export function useTodoTableState(todos: Todo[], projectFilter?: string | null) 
           aValue = new Date(a.createdAt || 0).getTime();
           bValue = new Date(b.createdAt || 0).getTime();
           break;
+        case "dueDate":
+          aValue = new Date(a.dueDate || 0).getTime();
+          bValue = new Date(b.dueDate || 0).getTime();
+          break;
         case "modified":
         default:
           aValue = new Date(a.updatedAt || 0).getTime();
