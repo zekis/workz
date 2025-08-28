@@ -20,7 +20,8 @@ import {
   Divider,
   useTheme,
   useMediaQuery,
-  Collapse
+  Collapse,
+  CircularProgress
 } from "@mui/material";
 import {
   Menu as MenuIcon,
@@ -75,7 +76,7 @@ export function ProjectMenu(props: ProjectMenuProps) {
   } | null>(null);
 
   // Use reference resolver to get display names
-  const { resolveReference } = useReferenceResolver(todos);
+  const { resolveReference, isLoading: isResolvingReferences } = useReferenceResolver(todos);
 
   // Calculate reference statistics
   const referenceStats = React.useMemo(() => {
@@ -208,7 +209,12 @@ export function ProjectMenu(props: ProjectMenuProps) {
       {/* Header */}
       <Box sx={{ p: 2, borderBottom: 1, borderColor: "divider", flexShrink: 0 }}>
         <Box display="flex" alignItems="center" justifyContent="space-between">
-          <Typography variant="h6">References</Typography>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Typography variant="h6">References</Typography>
+            {isResolvingReferences && (
+              <CircularProgress size={16} thickness={4} />
+            )}
+          </Box>
           <IconButton onClick={onToggle} size="small">
             <CloseIcon />
           </IconButton>

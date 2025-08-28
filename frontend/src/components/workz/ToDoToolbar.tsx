@@ -21,7 +21,8 @@ import {
   Collapse,
   useMediaQuery,
   useTheme,
-  Menu
+  Menu,
+  Paper
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -54,8 +55,8 @@ export interface ToDoToolbarProps {
   onSortOrderChange?: (order: "asc" | "desc") => void;
   hideClosedCancelled?: boolean;
   onHideClosedCancelledChange?: (hide: boolean) => void;
-  quickFilter?: "" | "today" | "week";
-  onQuickFilterChange?: (filter: "" | "today" | "week") => void;
+  quickFilter?: "" | "today" | "week" | "overdue";
+  onQuickFilterChange?: (filter: "" | "today" | "week" | "overdue") => void;
   currentReference?: string | null;
   todos?: import("../../hooks/useTodos").Todo[];
   onRefresh?: () => void;
@@ -97,7 +98,7 @@ export function ToDoToolbar(props: ToDoToolbarProps) {
   } = props;
 
   const [newTodoDialog, setNewTodoDialog] = React.useState(false);
-  const [filtersExpanded, setFiltersExpanded] = React.useState(true);
+  const [filtersExpanded, setFiltersExpanded] = React.useState(false);
   const [newMenuAnchor, setNewMenuAnchor] = React.useState<null | HTMLElement>(null);
 
   const theme = useTheme();
@@ -158,13 +159,16 @@ export function ToDoToolbar(props: ToDoToolbarProps) {
 
         <Stack direction="row" spacing={1} alignItems="center">
           {/* Filter Toggle - Available on All Views */}
-          <IconButton
-            onClick={() => setFiltersExpanded(!filtersExpanded)}
-            aria-label="Toggle filters"
-            size="small"
-          >
-            <FilterIcon />
-          </IconButton>
+          <Tooltip title={filtersExpanded ? "Hide filters" : "Show filters"}>
+            <IconButton
+              onClick={() => setFiltersExpanded(!filtersExpanded)}
+              aria-label="Toggle filters"
+              size="small"
+              color={hasActiveFilters ? "primary" : "default"}
+            >
+              {filtersExpanded ? <ExpandLessIcon /> : <FilterIcon />}
+            </IconButton>
+          </Tooltip>
 
           {/* Spacer to push New button to the right */}
           <Box flex={1} />
@@ -215,21 +219,29 @@ export function ToDoToolbar(props: ToDoToolbarProps) {
 
       {/* Filters Section - Collapsible on All Views */}
       <Collapse in={filtersExpanded}>
+        <Paper variant="outlined" sx={{ p: 2, mt: 1 }}>
         {/* Quick Filters Row */}
         <Box display="flex" flexDirection={{ xs: "column", sm: "row" }} gap={2} alignItems={{ sm: "center" }} mb={2}>
           <Stack direction="row" spacing={1} flexWrap="wrap">
             <Chip
-              label="Today"
+              label="Due Today"
               variant={quickFilter === "today" ? "filled" : "outlined"}
               color={quickFilter === "today" ? "primary" : "default"}
               onClick={() => onQuickFilterChange?.(quickFilter === "today" ? "" : "today")}
               clickable
             />
             <Chip
-              label="This Week"
+              label="Due This Week"
               variant={quickFilter === "week" ? "filled" : "outlined"}
               color={quickFilter === "week" ? "primary" : "default"}
               onClick={() => onQuickFilterChange?.(quickFilter === "week" ? "" : "week")}
+              clickable
+            />
+            <Chip
+              label="Overdue"
+              variant={quickFilter === "overdue" ? "filled" : "outlined"}
+              color={quickFilter === "overdue" ? "error" : "default"}
+              onClick={() => onQuickFilterChange?.(quickFilter === "overdue" ? "" : "overdue")}
               clickable
             />
             <Chip
@@ -251,12 +263,14 @@ export function ToDoToolbar(props: ToDoToolbarProps) {
           />
         </Box>
 
-        {/* Status Filter Badges */}
-        <Box mb={2}>
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: "block" }}>
-            Status
-          </Typography>
-          <Stack direction="row" spacing={1} flexWrap="wrap">
+        {/* Status and Priority Filters Row */}
+        <Box display="flex" flexDirection={{ xs: "column", md: "row" }} gap={2} mb={2}>
+          {/* Status Filter */}
+          <Box flex={1}>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: "block" }}>
+              Status
+            </Typography>
+            <Stack direction="row" spacing={1} flexWrap="wrap">
             <Chip
               label="All"
               variant={!statusFilter ? "filled" : "outlined"}
@@ -289,15 +303,15 @@ export function ToDoToolbar(props: ToDoToolbarProps) {
               clickable
               size="small"
             />
-          </Stack>
-        </Box>
+            </Stack>
+          </Box>
 
-        {/* Priority Filter Badges */}
-        <Box mb={2}>
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: "block" }}>
-            Priority
-          </Typography>
-          <Stack direction="row" spacing={1} flexWrap="wrap">
+          {/* Priority Filter */}
+          <Box flex={1}>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: "block" }}>
+              Priority
+            </Typography>
+            <Stack direction="row" spacing={1} flexWrap="wrap">
             <Chip
               label="All"
               variant={!priorityFilter ? "filled" : "outlined"}
@@ -330,7 +344,8 @@ export function ToDoToolbar(props: ToDoToolbarProps) {
               clickable
               size="small"
             />
-          </Stack>
+            </Stack>
+          </Box>
         </Box>
 
         {/* Search and Filters Row */}
@@ -373,6 +388,7 @@ export function ToDoToolbar(props: ToDoToolbarProps) {
             )}
           </Stack>
         </Box>
+        </Paper>
       </Collapse>
 
       {/* New Todo Dialog */}

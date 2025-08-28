@@ -22,7 +22,7 @@ export function useTodoTableState(todos: Todo[], projectFilter?: string | null) 
   const [sortBy, setSortBy] = useState("modified");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [hideClosedCancelled, setHideClosedCancelled] = useState(true);
-  const [quickFilter, setQuickFilter] = useState<"" | "today" | "week">("");
+  const [quickFilter, setQuickFilter] = useState<"" | "today" | "week" | "overdue">("");
 
   // Filter todos based on search and filters (excluding assignee filter for avatar display)
   const filteredTodosForAvatars = useMemo(() => {
@@ -36,23 +36,34 @@ export function useTodoTableState(todos: Todo[], projectFilter?: string | null) 
       );
     }
 
-    // Quick filter for date ranges
+    // Quick filter for due date ranges
     if (quickFilter === "today") {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
       filtered = filtered.filter(todo => {
-        if (!todo.updatedAt) return false;
-        const updatedDate = new Date(todo.updatedAt);
-        updatedDate.setHours(0, 0, 0, 0);
-        return updatedDate.getTime() === today.getTime();
+        if (!todo.dueDate) return false;
+        const dueDate = new Date(todo.dueDate);
+        return dueDate >= today && dueDate < tomorrow;
       });
     } else if (quickFilter === "week") {
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const weekFromNow = new Date(today);
+      weekFromNow.setDate(weekFromNow.getDate() + 7);
       filtered = filtered.filter(todo => {
-        if (!todo.updatedAt) return false;
-        const updatedDate = new Date(todo.updatedAt);
-        return updatedDate >= weekAgo;
+        if (!todo.dueDate) return false;
+        const dueDate = new Date(todo.dueDate);
+        return dueDate >= today && dueDate <= weekFromNow;
+      });
+    } else if (quickFilter === "overdue") {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      filtered = filtered.filter(todo => {
+        if (!todo.dueDate) return false;
+        const dueDate = new Date(todo.dueDate);
+        return dueDate < today;
       });
     }
 
